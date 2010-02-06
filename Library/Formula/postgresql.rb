@@ -25,6 +25,7 @@ class Postgresql <Formula
         "--with-libxml",
         "--with-libxslt",
         "--prefix=#{prefix}",
+        "--datarootdir=#{share}/postgresql",
         "--disable-debug",
     ]
 
@@ -37,6 +38,7 @@ class Postgresql <Formula
 
     system "./configure", *configure_args
     system "make install"
+    system "make -C contrib install"
 
     (prefix+'org.postgresql.postgres.plist').write startup_plist
   end
