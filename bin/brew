@@ -77,6 +77,8 @@ begin
     puts HOMEBREW_PREFIX
   when '--repository'
     puts HOMEBREW_REPOSITORY
+  when '--cellar'
+    puts HOMEBREW_CELLAR
   when '--config'
     dump_config
 
@@ -211,8 +213,13 @@ begin
     if ARGV.named.empty?
       require 'formula'
       HOMEBREW_CELLAR.children.each do |rack|
-        cleanup(rack.basename.to_s) if rack.directory?
+        begin
+          cleanup(rack.basename.to_s) if rack.directory?
+        rescue FormulaUnavailableError => e
+          opoo "Formula not found for #{e.name}"
+        end
       end
+      prune # seems like a good time to do some additional cleanup
     else
       ARGV.named.each { |name| cleanup name}
     end

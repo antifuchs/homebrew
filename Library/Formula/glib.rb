@@ -8,8 +8,8 @@ end
 
 
 class Glib <Formula
-  @url='http://ftp.acc.umu.se/pub/gnome/sources/glib/2.20/glib-2.20.5.tar.bz2'
-  @md5='4c178b91d82ef80a2da3c26b772569c0'
+  @url='http://ftp.gnome.org/pub/gnome/sources/glib/2.22/glib-2.22.4.tar.bz2'
+  @md5='d91bcbe27556430ddecce65086355708'
   @homepage='http://www.gtk.org'
 
   depends_on 'pkg-config'
@@ -54,6 +54,9 @@ class Glib <Formula
     inreplace lib+'pkgconfig'+'glib-2.0.pc',
               'Libs: -L${libdir} -lglib-2.0 -lintl',
               "Libs: -L${libdir} -lglib-2.0 -L#{gettext.lib} -lintl"
+    inreplace lib+'pkgconfig'+'glib-2.0.pc',
+              'Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include',
+              "Cflags: -I${includedir}/glib-2.0 -I${libdir}/glib-2.0/include -I#{gettext.include}"
 
     (prefix+'share'+'gtk-doc').rmtree
   end
