@@ -110,7 +110,7 @@ class Pathname
 
     # github tarballs are special
     # we only support numbered tagged downloads
-    %r[github.com/.*/tarball/v?((\d\.)+\d)$].match to_s
+    %r[github.com/.*/tarball/v?((\d\.)+\d+)$].match to_s
     return $1 if $1
 
     # eg. boost_1_39_0
@@ -157,7 +157,13 @@ class Pathname
 
   def md5
     require 'digest'
-    Digest::MD5.hexdigest(File.read(self))
+    incr_md5 = Digest::MD5.new
+    self.open('r') do |f|
+      f.each_line do |line|
+        incr_md5 << line
+      end
+    end
+    incr_md5.hexdigest
   end
 
   if '1.9' <= RUBY_VERSION
