@@ -65,15 +65,8 @@ GCC-4.2: #{gcc_42 ? "build #{gcc_42}" : "N/A"} (#{RECOMMENDED_GCC_42} or newer r
 LLVM: #{llvm ? "build #{llvm}" : "N/A" } #{llvm ? "(#{RECOMMENDED_LLVM} or newer recommended)" : "" }
 MacPorts or Fink? #{macports_or_fink_installed?}
 X11 installed? #{x11_installed?}
+PATH: #{ENV['PATH']}
 EOS
-end
-
-def dump_build_env env
-  puts "\"--use-llvm\" was specified" if ARGV.include? '--use-llvm'
-
-  %w[CC CXX LD CFLAGS CPPFLAGS CXXFLAGS LDFLAGS MAKEFLAGS HOMEBREW_USE_LLVM].each do |k|
-    puts "#{k}: #{env[k]}"
-  end
 end
 
 begin
@@ -112,6 +105,16 @@ begin
         dirs -= ['Library', 'Cellar', '.git']
         Dir.chdir HOMEBREW_PREFIX
         exec 'find', *dirs + %w[-type f ( ! -iname .ds_store ! -iname brew )]
+      elsif ARGV.flag? '--versions'
+        if ARGV.named.empty?
+          to_list = HOMEBREW_CELLAR.children.select { |pn| pn.directory? }
+        else
+          to_list = ARGV.named.collect { |n| HOMEBREW_CELLAR+n }.select { |pn| pn.exist? }
+        end
+        to_list.each do |d|
+          versions = d.children.select { |pn| pn.directory? }.collect { |pn| pn.basename.to_s }
+          puts "#{d.basename} #{versions *' '}"
+        end
       elsif ARGV.named.empty?
         ENV['CLICOLOR']=nil
         exec 'ls', *ARGV.options<<HOMEBREW_CELLAR if HOMEBREW_CELLAR.exist?
@@ -364,6 +367,10 @@ begin
   when 'branch', 'checkout', 'pull', 'push', 'rebase', 'reset'
     onoe "Unknown command: #{arg} (did you mean 'git #{arg}'?)"
 
+  when 'doctor'
+    require 'brew_doctor'
+    brew_doctor
+
   else
     onoe "Unknown command: #{arg}"
   end
@@ -401,6 +408,7 @@ rescue BuildError => e
   # then replace that string with the following when the github api returns
   issues = issues_for_formula(formula_name)
   puts "These existing issues may help you:", *issues unless issues.empty?
+  puts "Consider running `brew doctor` if a large number of installs are failing."
   exit 1
 rescue RuntimeError, SystemCallError => e
   onoe e

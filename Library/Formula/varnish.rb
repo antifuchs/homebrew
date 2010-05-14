@@ -1,9 +1,11 @@
 require 'formula'
 
 class Varnish <Formula
-  url 'http://downloads.sourceforge.net/project/varnish/varnish/2.0.6/varnish-2.0.6.tar.gz'
+  url 'http://downloads.sourceforge.net/project/varnish/varnish/2.1.2/varnish-2.1.2.tar.gz'
   homepage 'http://varnish.projects.linpro.no/'
-  md5 'd91dc21c636db61c69b5e8f061c5bb95'
+  md5 '8b0d80e47acf4946671c381af55518b9'
+
+  depends_on 'pkg-config'
 
   def skip_clean? path
     # Do not strip varnish binaries: Otherwise, the magic string end pointer isn't found.
@@ -11,7 +13,9 @@ class Varnish <Formula
   end
 
   def install
-    system "./configure", "--prefix=#{prefix}", "--localstatedir=#{var}", "--disable-debug", "--disable-dependency-tracking"
+    system "./configure", "--disable-dependency-tracking",
+                          "--prefix=#{prefix}",
+                          "--localstatedir=#{var}"
     system "make install"
     (var+'varnish').mkpath
   end

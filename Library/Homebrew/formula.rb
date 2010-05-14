@@ -34,10 +34,15 @@ class Formulary
   def self.read_all
   # yields once for each
     Formulary.names.each do |name|
-      require Formula.path(name)
-      klass_name = Formula.class_s(name)
-      klass = eval(klass_name)
-      yield name, klass
+      begin
+        require Formula.path(name)
+        klass_name = Formula.class_s(name)
+        klass = eval(klass_name)
+        yield name, klass
+      rescue Exception=>e
+        opoo "Error importing #{name}:"
+        puts "#{e}"
+      end
     end
   end
 
@@ -111,19 +116,19 @@ class Formula
   end
 
   def cached_download
-    @downloader.tarball_path
+    @downloader.cached_location
   end
 
   attr_reader :url, :version, :homepage, :name, :specs
 
   def bin; prefix+'bin' end
   def sbin; prefix+'sbin' end
-  def doc; prefix+'share'+'doc'+name end
+  def doc; prefix+'share/doc'+name end
   def lib; prefix+'lib' end
   def libexec; prefix+'libexec' end
-  def man; prefix+'share'+'man' end
+  def man; prefix+'share/man' end
   def man1; man+'man1' end
-  def info; prefix+'share'+'info' end
+  def info; prefix+'share/info' end
   def include; prefix+'include' end
   def share; prefix+'share' end
 
@@ -134,6 +139,25 @@ class Formula
   
   # reimplement if we don't autodetect the download strategy you require
   def download_strategy
+    if @specs and @url == @head
+      vcs = @specs.delete :using
+      if vcs != nil
+        # If a class is passed, assume it is a download strategy
+        return vcs if vcs.kind_of? Class
+
+        case vcs
+        when :bzr then return BazaarDownloadStrategy
+        when :curl then return CurlDownloadStrategy
+        when :cvs then return CVSDownloadStrategy
+        when :git then return GitDownloadStrategy
+        when :hg then return MercurialDownloadStrategy
+        when :svn then return SubversionDownloadStrategy
+        end
+
+        raise "Unknown strategy #{vcs} was requested."
+      end
+    end
+
     detect_download_strategy url
   end
 
@@ -326,16 +350,10 @@ private
     supplied=instance_variable_get("@#{type}")
     type=type.to_s.upcase
     hasher = Digest.const_get(type)
-
-    # Most are MD5 and it should be efficient.
-    if hasher == Digest::MD5
-      hash = fn.md5
-    else
-      hash = hasher.hexdigest(fn.read)
-    end
+    hash = fn.incremental_hash(hasher)
 
     if supplied and not supplied.empty?
-      raise "#{type} mismatch\nExpected: #{hash}\nArchive: #{fn}" unless supplied.upcase == hash.upcase
+      raise "#{type} mismatch\nExpected: #{supplied}\nGot: #{hash}\nArchive: #{fn}" unless supplied.upcase == hash.upcase
     else
       opoo "Cannot verify package integrity"
       puts "The formula did not provide a download checksum"
@@ -462,7 +480,7 @@ private
 
     def depends_on name
       @deps ||= []
-      @external_deps ||= {:python => [], :ruby => [], :perl => []}
+      @external_deps ||= {:python => [], :perl => [], :ruby => [], :jruby => []}
 
       case name
       when String
@@ -470,7 +488,7 @@ private
       when Hash
         key, value = name.shift
         case value
-        when :python, :ruby, :perl
+        when :python, :perl, :ruby, :jruby
           @external_deps[value] << key
           return
         when :optional, :recommended

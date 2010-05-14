@@ -2,8 +2,8 @@ require 'formula'
 
 class Mysql <Formula
   homepage 'http://dev.mysql.com/doc/refman/5.1/en/'
-  url 'http://mysql.llarian.net/Downloads/MySQL-5.1/mysql-5.1.45.tar.gz'
-  md5 '06b5deb3a13c7600c38ba65b9f7e42c4'
+  url 'http://mysql.llarian.net/Downloads/MySQL-5.1/mysql-5.1.46.tar.gz'
+  md5 '04f7c1422199c73a88a3d408b9161b63'
 
   depends_on 'readline'
 
@@ -59,9 +59,20 @@ class Mysql <Formula
     Set up databases with:
         mysql_install_db
 
-    Automatically load on login with:
-        launchctl load -w #{prefix}/com.mysql.mysqld.plist
+    If this is your first install, automatically load on login with:
+        cp #{prefix}/com.mysql.mysqld.plist ~/Library/LaunchAgents
+        launchctl load -w ~/Library/LaunchAgents/com.mysql.mysqld.plist
 
+    If this is an upgrade and you already have the com.mysql.mysqld.plist loaded: 
+        launchctl unload -w ~/Library/LaunchAgents/com.mysql.mysqld.plist
+        cp #{prefix}/com.mysql.mysqld.plist ~/Library/LaunchAgents
+        launchctl load -w ~/Library/LaunchAgents/com.mysql.mysqld.plist
+
+    Note on upgrading: 
+        We overwrite any existing com.mysql.mysqld.plist in ~/Library/LaunchAgents 
+        if we are upgrading because previous versions of this brew created the 
+        plist with a version specific program argument.
+    
     Or start manually with:
         #{prefix}/share/mysql/mysql.server start
     EOS

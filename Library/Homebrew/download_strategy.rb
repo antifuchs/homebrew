@@ -41,6 +41,10 @@ class CurlDownloadStrategy <AbstractDownloadStrategy
     end
   end
   
+  def cached_location
+    @tarball_path
+  end
+
   def fetch
     ohai "Downloading #{@url}"
     unless @tarball_path.exist?
@@ -73,6 +77,8 @@ class CurlDownloadStrategy <AbstractDownloadStrategy
       # TODO check if it's really a tar archive
       safe_system '/usr/bin/tar', 'xf', @tarball_path
       chdir
+    when 'Rar!'
+      quiet_safe_system 'unrar', 'x', {:quiet_flag => '-inul'}, @tarball_path
     else
       # we are assuming it is not an archive, use original filename
       # this behaviour is due to ScriptFileFormula expectations
@@ -118,9 +124,17 @@ class NoUnzipCurlDownloadStrategy <CurlDownloadStrategy
 end
 
 class SubversionDownloadStrategy <AbstractDownloadStrategy
+  def initialize url, name, version, specs
+    super
+    @co=HOMEBREW_CACHE+@unique_token
+  end
+
+  def cached_location
+    @co
+  end
+
   def fetch
     ohai "Checking out #{@url}"
-    @co=HOMEBREW_CACHE+@unique_token
     unless @co.exist?
       quiet_safe_system svn, 'checkout', @url, @co
     else
@@ -145,9 +159,17 @@ class SubversionDownloadStrategy <AbstractDownloadStrategy
 end
 
 class GitDownloadStrategy <AbstractDownloadStrategy
+  def initialize url, name, version, specs
+    super
+    @clone=HOMEBREW_CACHE+@unique_token
+  end
+
+  def cached_location
+    @clone
+  end
+
   def fetch
     ohai "Cloning #{@url}"
-    @clone=HOMEBREW_CACHE+@unique_token
     unless @clone.exist?
       safe_system 'git', 'clone', @url, @clone # indeed, leave it verbose
     else
@@ -170,6 +192,13 @@ class GitDownloadStrategy <AbstractDownloadStrategy
       end
       # http://stackoverflow.com/questions/160608/how-to-do-a-git-export-like-svn-export
       safe_system 'git', 'checkout-index', '-a', '-f', "--prefix=#{dst}/"
+      # check for submodules
+      if File.exist?('.gitmodules')
+        safe_system 'git', 'submodule', 'init'
+        safe_system 'git', 'submodule', 'update'
+        sub_cmd = "git checkout-index -a -f \"--prefix=#{dst}/$path/\""
+        safe_system 'git', 'submodule', '--quiet', 'foreach', '--recursive', sub_cmd
+      end
     end
   end
 end
