@@ -1,26 +1,36 @@
 require 'formula'
 require 'hardware'
 
+def bits_64?; MACOS_VERSION >= 10.6 && Hardware.is_64_bit?; end
+
 class Postgresql <Formula
   homepage 'http://www.postgresql.org/'
-  url 'http://ftp2.uk.postgresql.org/sites/ftp.postgresql.org/source/v8.4.3/postgresql-8.4.3.tar.bz2'
-  md5 '7f70e7b140fb190f268837255582b07e'
+  url 'http://ftp2.uk.postgresql.org/sites/ftp.postgresql.org/source/v8.4.4/postgresql-8.4.4.tar.bz2'
+  md5 '4bf2448ad965bca3940df648c02194df'
 
   depends_on 'readline'
   depends_on 'libxml2' if MACOS_VERSION < 10.6 #system libxml is too old
+  depends_on 'ossp-uuid' if ARGV.include? '--ossp-uuid'
 
   aka 'postgres'
 
   def options
     [
       ['--no-python', 'Build without Python support.'],
-      ['--no-perl', 'Build without Perl support.']
+      ['--no-perl', 'Build without Perl support.'],
+      ['--ossp-uuid', 'Build with UUID generation functions']
     ]
+  end
+
+  def skip_clean? path
+    # NOTE at some point someone should tweak this so it only skips clean
+    # for the bits that break the build otherwise
+    true
   end
 
   def install
     ENV.libxml2 # wouldn't compile for justinlilly otherwise
-    
+
     configure_args = [
         "--enable-thread-safety",
         "--with-bonjour",
@@ -36,6 +46,13 @@ class Postgresql <Formula
 
     configure_args << "--with-python" unless ARGV.include? '--no-python'
     configure_args << "--with-perl" unless ARGV.include? '--no-perl'
+
+    if ARGV.include? '--ossp-uuid'
+      configure_args << "--with-ossp-uuid"
+      ENV.append 'CFLAGS', `uuid-config --cflags`.strip
+      ENV.append 'LDFLAGS', `uuid-config --ldflags`.strip
+      ENV.append 'LIBS', `uuid-config --libs`.strip
+    end
 
     if bits_64? and not ARGV.include? '--no-python'
       configure_args << "ARCHFLAGS='-arch x86_64'"
@@ -71,17 +88,9 @@ class Postgresql <Formula
     system "make install"
     system "make -C contrib install"
 
+    system "cd contrib/uuid-ossp; make install" if ARGV.include? '--ossp-uuid'
+
     (prefix+'org.postgresql.postgres.plist').write startup_plist
-  end
-
-  def skip_clean? path
-    # NOTE at some point someone should tweak this so it only skips clean
-    # for the bits that break the build otherwise
-    true
-  end
-
-  def bits_64?
-    MACOS_VERSION >= 10.6 && Hardware.is_64_bit?
   end
 
   def caveats
@@ -104,7 +113,7 @@ Or start manually with:
 And stop with:
     pg_ctl -D #{var}/postgres stop -s -m fast
 EOS
-    
+
     if bits_64? then
       caveats << <<-EOS
 
