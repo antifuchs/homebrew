@@ -45,11 +45,16 @@ class CurlDownloadStrategy <AbstractDownloadStrategy
     @tarball_path
   end
 
+  # Private method, can be overridden if needed.
+  def _fetch
+    curl @url, '-o', @tarball_path
+  end
+
   def fetch
     ohai "Downloading #{@url}"
     unless @tarball_path.exist?
       begin
-        curl @url, '-o', @tarball_path
+        _fetch
       rescue Exception
         ignore_interrupts { @tarball_path.unlink if @tarball_path.exist? }
         raise
@@ -63,6 +68,9 @@ class CurlDownloadStrategy <AbstractDownloadStrategy
   def stage
     if @tarball_path.extname == '.jar'
       magic_bytes = nil
+    elsif @tarball_path.extname == '.pkg'
+      # Use more than 4 characters to not clash with magicbytes
+      magic_bytes = "____pkg"
     else
       # get the first four bytes
       File.open(@tarball_path) { |f| magic_bytes = f.read(4) }
@@ -76,6 +84,9 @@ class CurlDownloadStrategy <AbstractDownloadStrategy
     when /^\037\213/, /^BZh/, /^\037\235/  # gzip/bz2/compress compressed
       # TODO check if it's really a tar archive
       safe_system '/usr/bin/tar', 'xf', @tarball_path
+      chdir
+    when '____pkg'
+      safe_system '/usr/sbin/pkgutil', '--expand', @tarball_path, File.basename(@url)
       chdir
     when 'Rar!'
       quiet_safe_system 'unrar', 'x', {:quiet_flag => '-inul'}, @tarball_path
@@ -115,11 +126,30 @@ private
   end
 end
 
+# Download via an HTTP POST.
+# Query parameters on the URL are converted into POST parameters
+class CurlPostDownloadStrategy <CurlDownloadStrategy
+  def _fetch
+    base_url,data = @url.split('?')
+    curl base_url, '-d', data, '-o', @tarball_path
+  end
+end
+
 # Use this strategy to download but not unzip a file.
 # Useful for installing jars.
 class NoUnzipCurlDownloadStrategy <CurlDownloadStrategy
   def stage
-    FileUtils.mv @tarball_path, File.basename(@url)
+    FileUtils.cp @tarball_path, File.basename(@url)
+  end
+end
+
+# This Download Strategy is provided for use with sites that
+# only provide HTTPS and also have a broken cert.
+# Try not to need this, as we probably won't accept the forulae
+# into trunk.
+class CurlUnsafeDownloadStrategy <CurlDownloadStrategy
+  def _fetch
+    curl @url, '--insecure', '-o', @tarball_path
   end
 end
 
@@ -178,11 +208,30 @@ class SubversionDownloadStrategy <AbstractDownloadStrategy
     quiet_safe_system *args
   end
 
-  # Override this method in a DownloadStrategy to force the use of a non-
-  # system svn binary. mplayer.rb uses this to require a svn new enough to
-  # understand its externals.
+  # Try HOMEBREW_SVN, a Homebrew-built svn, and finally the OS X system svn.
+  # Not all features are available in the 10.5 system-provided svn.
   def svn
-    '/usr/bin/svn'
+    return ENV['HOMEBREW_SVN'] if ENV['HOMEBREW_SVN']
+    return "#{HOMEBREW_PREFIX}/bin/svn" if File.exist? "#{HOMEBREW_PREFIX}/bin/svn"
+    return '/usr/bin/svn'
+  end
+end
+
+# Require a newer version of Subversion than 1.4.x (Leopard-provided version)
+class StrictSubversionDownloadStrategy <SubversionDownloadStrategy
+  def svn
+    exe = super
+    `#{exe} --version` =~ /version (\d+\.\d+(\.\d+)*)/
+    svn_version = $1
+    version_tuple=svn_version.split(".").collect {|v|Integer(v)}
+
+    if version_tuple[0] == 1 and version_tuple[1] <= 4
+      onoe "Detected Subversion (#{exe}, version #{svn_version}) is too old."
+      puts "Subversion 1.4.x will not export externals correctly for this formula."
+      puts "You must either `brew install subversion` or set HOMEBREW_SVN to the path"
+      puts "of a newer svn binary."
+    end
+    return exe
   end
 end
 
@@ -197,6 +246,10 @@ class GitDownloadStrategy <AbstractDownloadStrategy
   end
 
   def fetch
+    raise "You must install Git:\n\n"+
+          "  brew install git\n" \
+          unless system "/usr/bin/which git"
+
     ohai "Cloning #{@url}"
     unless @clone.exist?
       safe_system 'git', 'clone', @url, @clone # indeed, leave it verbose
@@ -364,16 +417,20 @@ end
 
 def detect_download_strategy url
   case url
+    # We use a special URL pattern for cvs
   when %r[^cvs://] then CVSDownloadStrategy
+    # Standard URLs
+  when %r[^bzr://] then BazaarDownloadStrategy
+  when %r[^git://] then GitDownloadStrategy
   when %r[^hg://] then MercurialDownloadStrategy
   when %r[^svn://] then SubversionDownloadStrategy
   when %r[^svn+http://] then SubversionDownloadStrategy
-  when %r[^git://] then GitDownloadStrategy
-  when %r[^bzr://] then BazaarDownloadStrategy
+    # Some well-known source hosts
   when %r[^https?://(.+?\.)?googlecode\.com/hg] then MercurialDownloadStrategy
   when %r[^https?://(.+?\.)?googlecode\.com/svn] then SubversionDownloadStrategy
   when %r[^https?://(.+?\.)?sourceforge\.net/svnroot/] then SubversionDownloadStrategy
   when %r[^http://svn.apache.org/repos/] then SubversionDownloadStrategy
+    # Otherwise just try to download
   else CurlDownloadStrategy
   end
 end
