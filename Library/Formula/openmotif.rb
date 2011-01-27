@@ -5,6 +5,8 @@ class Openmotif <Formula
   homepage 'http://motifzone.com'
   md5 'fd27cd3369d6c7d5ef79eccba524f7be'
 
+  depends_on 'jpeg'
+
   def patches
     # Allow UIL to compile on OS X - allegedly fixed in the release after 2.3.3:
     {:p1 => 'http://bugs.motifzone.net/showattachment.cgi?attach_id=259' }
