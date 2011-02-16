@@ -19,6 +19,7 @@ class Openmotif <Formula
   def install
     ENV.universal_binary
     ENV.j1
+    ENV.gcc_4_2    # llvm-gcc refuses to link the i386 platform libraries.
     system "./configure", "--disable-debug", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
                           "--enable-jpeg", "--enable-png", "--enable-xft",
