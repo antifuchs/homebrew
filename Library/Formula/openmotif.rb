@@ -8,8 +8,12 @@ class Openmotif <Formula
   depends_on 'jpeg'
 
   def patches
-    # Allow UIL to compile on OS X - allegedly fixed in the release after 2.3.3:
-    {:p1 => 'http://bugs.motifzone.net/showattachment.cgi?attach_id=259' }
+    {:p1 => [
+        # Allow UIL to compile on OS X - allegedly fixed in the release after 2.3.3:
+        'http://bugs.motifzone.net/showattachment.cgi?attach_id=259', 
+        # Use the correct freetype header for configure:
+        'https://gist.github.com/raw/829781/e75f73b7c34f1e16ad0d811ec4f32229418fb0ce/gistfile1.txt'
+     ]}
   end
 
   def install
@@ -17,7 +21,8 @@ class Openmotif <Formula
     ENV.j1
     system "./configure", "--disable-debug", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
-                          "--enable-jpeg", "--enable-png", "--enable-xft"
+                          "--enable-jpeg", "--enable-png", "--enable-xft",
+			  "--with-freetype-config=/usr/X11/bin/freetype-config"
     system "make"
     system "make install"
   end
