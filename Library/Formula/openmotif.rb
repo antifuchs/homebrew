@@ -21,9 +21,7 @@ class Openmotif <Formula
     ENV.j1
     ENV.gcc_4_2    # llvm-gcc refuses to link the i386 platform libraries.
     system "./configure", "--disable-debug", "--disable-dependency-tracking",
-                          "--prefix=#{prefix}",
-                          "--enable-jpeg", "--enable-png", "--enable-xft",
-			  "--with-freetype-config=/usr/X11/bin/freetype-config"
+                          "--prefix=#{prefix}", "--disable-jpeg", "--enable-png", "--disable-xft"
     system "make"
     system "make install"
   end
