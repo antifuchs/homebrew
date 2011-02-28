@@ -1,14 +1,14 @@
 require 'formula'
 
 class Gradle <Formula
-  url 'http://dist.codehaus.org/gradle/gradle-0.8-all.zip'
   homepage 'http://www.gradle.org/'
-  version '0.8'
-  md5 '73a0ed51b6ec00a7d3a9d242d51aae60'
+  version '0.9.2'
+  url 'http://gradle.artifactoryonline.com/gradle/distributions/gradle-0.9.2-all.zip'
+  md5 '8574a445267ce3ad21558e300d854d24'
 
   def install
     rm_f Dir["bin/*.bat"]
-    libexec.install %w[bin lib gradle-imports plugin.properties]
+    libexec.install %w[bin lib]
     bin.mkpath
     ln_s libexec+('bin/gradle'), bin
   end

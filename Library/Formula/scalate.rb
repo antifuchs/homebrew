@@ -1,14 +1,14 @@
 require 'formula'
 
 class Scalate <Formula
-  url 'http://repo1.maven.org/maven2/org/fusesource/scalate/scalate-distro/1.1/scalate-distro-1.1-unix-bin.tar.gz'
-  version '1.1'
+  url 'http://repo.fusesource.com/nexus/content/repositories/public/org/fusesource/scalate/scalate-distro/1.4.0/scalate-distro-1.4.0-unix-bin.tar.gz'
+  version '1.4.0'
   homepage 'http://scalate.fusesource.org/'
-  md5 'fbbca51775da58464e1eddd30c736596'
+  md5 'e2c7f309a2774a13262102ce70f78a21'
 
   def startup_script
     <<-EOS.undent
-    #!/usr/bin/env bash
+    #!/bin/bash
     # This startup script for Scalate calls the real startup script installed
     # to Homebrew's cellar. This avoids issues with local vs. absolute symlinks.
 

@@ -2,7 +2,7 @@ require 'formula'
 
 class Plowshare <Formula
   head 'http://plowshare.googlecode.com/svn/trunk/'
-  homepage 'http://code.google.com/p/plowshare'
+  homepage 'http://code.google.com/p/plowshare/'
 
   depends_on 'recode'
   depends_on 'imagemagick'
@@ -24,15 +24,15 @@ class Plowshare <Formula
 end
 
 
-#This patch makes sure GNUtools are used on OSX. 
+#This patch makes sure GNUtools are used on OSX.
 #gnu-getopt is keg-only hence the backtick expansion.
 #These aliases only exist for the duration of plowshare,
 #inside the plowshare shells. Normal operation of bash is
-#unaffected - getopt will still find the version supplied 
+#unaffected - getopt will still find the version supplied
 #by OSX in other shells, for example.
 __END__
---- a/src/lib.sh
-+++ b/src/lib.sh
+--- a/src/core.sh
++++ b/src/core.sh
 @@ -1,4 +1,8 @@
  #!/bin/bash
 +shopt -s expand_aliases
