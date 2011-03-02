@@ -17,9 +17,13 @@ class Openmotif <Formula
   end
 
   def install
-    ENV.universal_binary
     ENV.j1
+    ENV.minimal_optimization
+    ENV.x11
     ENV.gcc_4_2    # llvm-gcc refuses to link the i386 platform libraries.
+    ENV.osx_10_5
+    ENV.append_to_cflags '-isysroot /Developer/SDKs/MacOSX10.5.sdk'
+    ENV.universal_binary
     system "./configure", "--disable-debug", "--disable-dependency-tracking",
                           "--prefix=#{prefix}", "--disable-jpeg", "--enable-png", "--disable-xft"
     system "make"
